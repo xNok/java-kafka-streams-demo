@@ -3,5 +3,4 @@ spring:
         name: java-kafka-streams-demo
     kafka:
         streams:
-            bootstrap-servers: localhost:9092
-            application-id: java-kafka-streams-demo
+            bootstrap-servers: localhost:29092
