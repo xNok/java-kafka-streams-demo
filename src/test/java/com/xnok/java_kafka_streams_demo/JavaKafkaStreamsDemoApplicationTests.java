@@ -9,5 +9,4 @@ class JavaKafkaStreamsDemoApplicationTests {
 	@Test
 	void contextLoads() {
 	}
-
 }
