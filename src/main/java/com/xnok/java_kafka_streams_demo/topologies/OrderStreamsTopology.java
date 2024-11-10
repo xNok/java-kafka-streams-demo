@@ -18,7 +18,7 @@ public class OrderStreamsTopology {
     public static String ORDERS_ANALYTICS="orders-analytics";
     
     @Autowired
-    public void process(StreamsBuilder streamsBuilder){
+    public void register(StreamsBuilder streamsBuilder){
         var orderStream = streamsBuilder.stream(
             ORDERS, Consumed.with(Serdes.String(), Serdes.String())
         );
