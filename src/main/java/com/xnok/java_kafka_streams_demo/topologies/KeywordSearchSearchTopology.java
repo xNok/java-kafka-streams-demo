@@ -10,6 +10,7 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
+import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.stereotype.Component;
 import  org.springframework.web.client.RestTemplate;
@@ -29,14 +30,18 @@ public class KeywordSearchSearchTopology {
     public static final String SOURCE = "raw-search-queries";
     public static final String SINK = "search-queries";
 
+    private final ProductService productService; // Autowired ProductService
+
     @Autowired
-    private ProductService productService; // Autowired ProductService
+    public KeywordSearchSearchTopology(ProductService productService) {
+        this.productService = productService;
+    }
 
     @Autowired
     public void register(StreamsBuilder builder) {
         // 1. Consume search events from the input topic
         KStream<String, SearchEvent> searchStream = builder.stream(SOURCE,
-                Consumed.with(Serdes.String(), Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SearchEvent.class))));
+                Consumed.with(Serdes.String(), new JsonSerde<>(SearchEvent.class)));
 
         searchStream.print(Printed.<String, SearchEvent>toSysOut().withLabel(SOURCE));
 
@@ -75,8 +80,8 @@ public class KeywordSearchSearchTopology {
         enrichedStream.print(Printed.<String, SearchEvent>toSysOut().withLabel(SINK));
         enrichedStream.to(SINK,
                 Produced.with(
-                        Serdes.String(),
-                        Serdes.serdeFrom(new JsonSerializer<>(), new JsonDeserializer<>(SearchEvent.class))
+                    Serdes.String(),
+                    new JsonSerde<SearchEvent>()
                 )
         );
     }

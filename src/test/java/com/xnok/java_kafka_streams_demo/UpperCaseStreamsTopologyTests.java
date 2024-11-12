@@ -1,7 +1,6 @@
 package com.xnok.java_kafka_streams_demo;
 
 import com.xnok.java_kafka_streams_demo.topologies.UpperCaseStreamsTopology;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.*;
@@ -16,7 +15,7 @@ import java.util.Properties;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-public class UpperCaseStreamsTopologyTest {
+public class UpperCaseStreamsTopologyTests {
 
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, String> inputTopic;

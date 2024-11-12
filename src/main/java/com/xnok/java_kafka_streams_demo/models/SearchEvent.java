@@ -3,12 +3,17 @@ package com.xnok.java_kafka_streams_demo.models;
 import lombok.Getter;
 import lombok.Setter;
 
+@Getter @Setter
 public class SearchEvent {
-    private String userId;
-    @Getter
-    @Setter
-    private String query;
     private long timestamp;
-    @Setter
-    private ProductData productData; // To store data from the API
+    private String userId;
+    private String query;
+    private ProductData productData; // To store search result from the API
+
+    public SearchEvent() {}
+
+    public SearchEvent(String userId, String query) {
+        this.userId = userId;
+        this.query = query;
+    }
 }
