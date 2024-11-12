@@ -4,20 +4,27 @@ import com.xnok.java_kafka_streams_demo.models.ProductData;
 import com.xnok.java_kafka_streams_demo.models.SearchEvent;
 import com.xnok.java_kafka_streams_demo.services.ProductService;
 import com.xnok.java_kafka_streams_demo.topologies.KeywordSearchSearchTopology;
+import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.*;
+import org.apache.kafka.streams.kstream.Windowed;
+import org.apache.kafka.streams.kstream.WindowedSerdes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.kafka.support.serializer.JsonDeserializer;
-import org.springframework.kafka.support.serializer.JsonSerde;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Properties;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.mockito.ArgumentMatchers.anyString;
 
 public class KeywordSearchSearchTopologyTests {
@@ -25,6 +32,7 @@ public class KeywordSearchSearchTopologyTests {
     private TopologyTestDriver testDriver;
     private TestInputTopic<String, SearchEvent> inputTopic;
     private TestOutputTopic<String, SearchEvent> outputTopic;
+    private TestOutputTopic<Windowed<String>, Long> analiticsTopic;
     private ProductService productServiceMock; // Mock ProductService
 
     @BeforeEach
@@ -46,6 +54,15 @@ public class KeywordSearchSearchTopologyTests {
                 KeywordSearchSearchTopology.SINK,
                 new StringDeserializer(),
                 new JsonDeserializer<>(SearchEvent.class));
+
+        analiticsTopic = testDriver.createOutputTopic(
+                KeywordSearchSearchTopology.SINK_ANALYTICS,
+                WindowedSerdes.timeWindowedSerdeFrom(
+                        String.class,
+                        Duration.ofMinutes(10).toMillis()
+                ).deserializer(),
+                Serdes.Long().deserializer()
+        );
     }
 
     @AfterEach
@@ -69,5 +86,28 @@ public class KeywordSearchSearchTopologyTests {
         KeyValue<String, SearchEvent> output = outputTopic.readKeyValue();
         assertEquals(expectedQuery, output.value.getQuery());
         assertEquals(mockProductData.getProductID(), output.value.getProductData().getProductID());
+    }
+
+    @Test
+    public void testTrendingKeywords() {
+        // 1. Define test data
+        List<SearchEvent> searchEvents = Arrays.asList(
+                new SearchEvent("user1", "Running shoes with red laces"),
+                new SearchEvent("user2", "blue shoes"),
+                new SearchEvent("user3", "Running shoes"),
+                new SearchEvent("user4", "red shoes"),
+                new SearchEvent("user5", "Running shoes with laces"),
+                new SearchEvent("user6", "shoes with red laces")
+        );
+        List<KeyValue<Windowed<String>, Long>> expectedResults = Arrays.asList();
+
+        // 2. Pipe input data to the input topic
+        for (SearchEvent event : searchEvents) {
+            inputTopic.pipeInput("key", event, Instant.now().toEpochMilli());
+        }
+
+        // 3. Verify trending keywords in the output topic
+        List<KeyValue<Windowed<String>, Long>> trendingKeywords = analiticsTopic.readKeyValuesToList();
+        assertIterableEquals(expectedResults, trendingKeywords);
     }
 }

@@ -9,11 +9,8 @@ import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerde;
-import org.springframework.kafka.support.serializer.JsonSerializer;
 import org.springframework.stereotype.Component;
-import  org.springframework.web.client.RestTemplate;
 
 import java.time.Duration;
 import java.util.*;
@@ -29,6 +26,11 @@ public class KeywordSearchSearchTopology {
 
     public static final String SOURCE = "raw-search-queries";
     public static final String SINK = "search-queries";
+
+    public static final String SINK_ANALYTICS = "search-query-analytics";
+    public static final TimeWindows ANALYTICS_WINDOWS = TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(10));
+
+    public static final String TRENDING_KEYWORD_STORE = "trending-keyword-store";
 
     private final ProductService productService; // Autowired ProductService
 
@@ -81,8 +83,23 @@ public class KeywordSearchSearchTopology {
         enrichedStream.to(SINK,
                 Produced.with(
                     Serdes.String(),
-                    new JsonSerde<SearchEvent>()
+                    new JsonSerde<>()
                 )
         );
+
+        // 5. Extract keywords from search queries
+        KStream<String, String> keywordStream = preprocessedStream.flatMapValues(searchEvent -> Arrays.asList(searchEvent.getQuery().toLowerCase().split("\\s+")));
+
+        // 6. Identify trending keywords using a tumbling window
+        KStream<Windowed<String>, Long> trendingKeywords = keywordStream
+                .groupBy((key, keyword) -> keyword, Grouped.with(Serdes.String(), Serdes.String()))
+                .windowedBy(ANALYTICS_WINDOWS)
+                .count(Materialized.as(TRENDING_KEYWORD_STORE))
+                .toStream()
+                .filter((windowedKeyword, count) -> count >= 5); // Threshold for trending keywords
+
+        trendingKeywords.to(SINK_ANALYTICS, Produced.with(
+                new WindowedSerdes.TimeWindowedSerde<>(Serdes.String(), Long.MAX_VALUE),
+                Serdes.Long()));
     }
 }
