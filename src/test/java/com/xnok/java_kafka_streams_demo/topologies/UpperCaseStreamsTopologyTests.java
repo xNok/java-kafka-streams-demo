@@ -1,6 +1,5 @@
-package com.xnok.java_kafka_streams_demo;
+package com.xnok.java_kafka_streams_demo.topologies;
 
-import com.xnok.java_kafka_streams_demo.topologies.UpperCaseStreamsTopology;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.*;

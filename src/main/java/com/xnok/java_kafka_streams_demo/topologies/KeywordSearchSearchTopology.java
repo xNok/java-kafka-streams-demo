@@ -28,7 +28,7 @@ public class KeywordSearchSearchTopology {
     public static final String SINK = "search-queries";
 
     public static final String SINK_ANALYTICS = "search-query-analytics";
-    public static final TimeWindows ANALYTICS_WINDOWS = TimeWindows.ofSizeWithNoGrace(Duration.ofMinutes(10));
+    public static final TimeWindows ANALYTICS_WINDOWS = TimeWindows.ofSizeWithNoGrace(Duration.ofSeconds(10));
 
     public static final String TRENDING_KEYWORD_STORE = "trending-keyword-store";
 

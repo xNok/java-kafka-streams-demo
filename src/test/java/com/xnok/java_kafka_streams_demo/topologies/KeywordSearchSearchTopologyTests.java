@@ -1,15 +1,15 @@
-package com.xnok.java_kafka_streams_demo;
+package com.xnok.java_kafka_streams_demo.topologies;
 
 import com.xnok.java_kafka_streams_demo.models.ProductData;
 import com.xnok.java_kafka_streams_demo.models.SearchEvent;
 import com.xnok.java_kafka_streams_demo.services.ProductService;
-import com.xnok.java_kafka_streams_demo.topologies.KeywordSearchSearchTopology;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.Windowed;
 import org.apache.kafka.streams.kstream.WindowedSerdes;
+import org.apache.kafka.streams.kstream.internals.TimeWindow;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +18,6 @@ import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
 
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
@@ -97,13 +96,21 @@ public class KeywordSearchSearchTopologyTests {
                 new SearchEvent("user3", "Running shoes"),
                 new SearchEvent("user4", "red shoes"),
                 new SearchEvent("user5", "Running shoes with laces"),
-                new SearchEvent("user6", "shoes with red laces")
+                new SearchEvent("user6", "Running shoes with red laces")
         );
-        List<KeyValue<Windowed<String>, Long>> expectedResults = Arrays.asList();
+        // Define the expected results with windowed keys and counts
+        long windowStartTime = 1731460800000L;
+        long windowEndTime = windowStartTime + Duration.ofMinutes(10).toMillis();
+        List<KeyValue<Windowed<String>, Long>> expectedResults = Arrays.asList(
+                new KeyValue<>(new Windowed<>("shoes", new TimeWindow(windowStartTime, windowEndTime)), 5L),
+                new KeyValue<>(new Windowed<>("shoes", new TimeWindow(windowStartTime, windowEndTime)), 6L)
+        );
 
         // 2. Pipe input data to the input topic
+        long eventTime = windowStartTime;
         for (SearchEvent event : searchEvents) {
-            inputTopic.pipeInput("key", event, Instant.now().toEpochMilli());
+            inputTopic.pipeInput("key", event, eventTime);
+            eventTime += Duration.ofSeconds(1).toMillis(); // next event slided by 10s
         }
 
         // 3. Verify trending keywords in the output topic
